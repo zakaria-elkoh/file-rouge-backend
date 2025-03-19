@@ -1,0 +1,80 @@
+name: File rouge backend CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-push-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test -- --passWithNoTests
+
+      - name: Build application
+        run: npm run build
+
+      - name: Read current version
+        id: get_version
+        run: echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+
+      - name: Determine new version
+        id: new_version
+        run: |
+          CURRENT_VERSION=${{ env.VERSION }}
+          echo "Current version: $CURRENT_VERSION"
+
+          MAJOR=$(echo $CURRENT_VERSION | cut -d. -f1)
+          MINOR=$(echo $CURRENT_VERSION | cut -d. -f2)
+          PATCH=$(echo $CURRENT_VERSION | cut -d. -f3)
+
+          if git log -1 --pretty=%B | grep -iq "BREAKING CHANGE"; then
+            NEW_VERSION="$((MAJOR + 1)).0.0"
+          elif git log -1 --pretty=%B | grep -iq "feat"; then
+            NEW_VERSION="$MAJOR.$((MINOR + 1)).0"
+          else
+            NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
+          fi
+
+          echo "New version: $NEW_VERSION"
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+
+      - name: Login to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build and push Docker image
+        run: |
+          docker build . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/waba:${{ env.NEW_VERSION }}
+          docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/waba:${{ env.NEW_VERSION }}
+
+      - name: Save new version to VERSION file
+        run: echo "${{ env.NEW_VERSION }}" > VERSION
+
+      # - name: Login to Azure
+      #   uses: azure/login@v1
+      #   with:
+      #     creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # - name: Deploy to Azure App Service
+      #   uses: azure/webapps-deploy@v2
+      #   with:
+      #     app-name: ${{ secrets.AZURE_APP_NAME }}
+      #     images: ${{ secrets.REGISTRY_LOGIN_SERVER }}/waba:${{ env.NEW_VERSION }}
