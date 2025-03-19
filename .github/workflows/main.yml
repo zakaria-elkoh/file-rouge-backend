@@ -68,13 +68,13 @@ jobs:
       - name: Save new version to VERSION file
         run: echo "${{ env.NEW_VERSION }}" > VERSION
 
-      # - name: Login to Azure
-      #   uses: azure/login@v1
-      #   with:
-      #     creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # - name: Deploy to Azure App Service
-      #   uses: azure/webapps-deploy@v2
-      #   with:
-      #     app-name: ${{ secrets.AZURE_APP_NAME }}
-      #     images: ${{ secrets.REGISTRY_LOGIN_SERVER }}/waba:${{ env.NEW_VERSION }}
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.AZURE_APP_NAME }}
+          images: ${{ secrets.REGISTRY_LOGIN_SERVER }}/filerougebackend:${{ env.NEW_VERSION }}

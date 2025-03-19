@@ -12,6 +12,7 @@ import AuthModule from './auth/auth.module';
 import PostsModule from './posts/posts.module';
 import CommentsModule from './comments/comments.module';
 import EventsModule from './events/events.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import EventsModule from './events/events.module';
     PhotosModule,
     FriendsModule,
     NotificationModule,
+    HealthModule,
   ],
   controllers: [],
   providers: [
