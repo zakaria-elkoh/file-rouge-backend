@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'VERSION'
 
 jobs:
   build-push-and-deploy:
@@ -68,13 +70,21 @@ jobs:
       - name: Save new version to VERSION file
         run: echo "${{ env.NEW_VERSION }}" > VERSION
 
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Commit and push updated VERSION file
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+          git add VERSION
+          git commit -m "chore: bump version to ${{ env.NEW_VERSION }}"
+          git push
 
-      - name: Deploy to Azure App Service
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: ${{ secrets.AZURE_APP_NAME }}
-          images: ${{ secrets.REGISTRY_LOGIN_SERVER }}/filerougebackend:${{ env.NEW_VERSION }}
+      # - name: Login to Azure
+      #   uses: azure/login@v1
+      #   with:
+      #     creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # - name: Deploy to Azure App Service
+      #   uses: azure/webapps-deploy@v2
+      #   with:
+      #     app-name: ${{ secrets.AZURE_APP_NAME }}
+      #     images: ${{ secrets.REGISTRY_LOGIN_SERVER }}/filerougebackend:${{ env.NEW_VERSION }}

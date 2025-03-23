@@ -29,6 +29,9 @@ export class Post {
 
   @Prop()
   updatedAt!: Date;
+
+  @Prop({ default: false })
+  archived!: boolean;
 }
 
 export const PostSchema = SchemaFactory.createForClass(Post);

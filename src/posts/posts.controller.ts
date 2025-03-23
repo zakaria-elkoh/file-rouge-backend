@@ -17,7 +17,7 @@ import {
 import { Request, Response } from 'express';
 import { IncomingForm } from 'formidable';
 import * as sharp from 'sharp';
-import { Public } from '../decorators/decorators';
+import { Public, IsAdmin } from '../decorators/decorators';
 import { getAdvanceResults } from '../helpers';
 import { NotificationTypeEnum } from '../notifications/notificationTypes';
 import FriendsService from '../friends/friends.service';
@@ -116,9 +116,16 @@ export default class PostsController {
   ) {
     const limit = limitQ ?? 2;
     const userId = req.user.id;
+    const isAdmin = req.user.isAdmin;
     const friends = await this.friendsService.getUserFriends(userId);
 
-    const query = { $or: [{ user: { $in: friends } }, { user: userId }] };
+    // Base query - posts from friends or self
+    const query: any = { $or: [{ user: { $in: friends } }, { user: userId }] };
+    
+    // Only admins can see archived posts
+    if (!isAdmin) {
+      query['archived'] = { $ne: true };
+    }
 
     return getAdvanceResults(
       this.postsService.getPostModel(),
@@ -134,8 +141,19 @@ export default class PostsController {
   }
 
   @Get()
-  async getAll(@Query('user') userId: string) {
-    return this.postsService.getAllPostsOfSingleUser(userId);
+  async getAll(@Query('user') userId: string, @Req() req: any) {
+    const isAdmin = req.user.isAdmin;
+    const query: any = userId ? { user: userId } : {};
+    
+    // Only admins can see archived posts
+    if (!isAdmin) {
+      query['archived'] = { $ne: true };
+    }
+    
+    return this.postsService.find(query, {
+      populate: postPopulateOptions,
+      sort: { createdAt: -1 },
+    });
   }
 
   @Get(':id')
@@ -229,5 +247,40 @@ export default class PostsController {
       { runValidators: true },
     );
     return 'Post unliked successfully';
+  }
+
+  // Admin routes for post management
+  @Get('/admin/all')
+  @IsAdmin()
+  async getAllPostsAdmin() {
+    const posts = await this.postsService.find({}, {
+      populate: postPopulateOptions,
+      sort: { createdAt: -1 },
+    });
+    return posts;
+  }
+
+  @Put('/admin/archive/:id')
+  @IsAdmin()
+  async archivePost(@Param('id') id: string) {
+    const post = await this.postsService.findByIdAndUpdate(
+      id,
+      { archived: true },
+      { populate: postPopulateOptions },
+    );
+    if (!post) throw new HttpException('Post not found', HttpStatus.NOT_FOUND);
+    return post;
+  }
+
+  @Put('/admin/unarchive/:id')
+  @IsAdmin()
+  async unarchivePost(@Param('id') id: string) {
+    const post = await this.postsService.findByIdAndUpdate(
+      id,
+      { archived: false },
+      { populate: postPopulateOptions },
+    );
+    if (!post) throw new HttpException('Post not found', HttpStatus.NOT_FOUND);
+    return post;
   }
 }

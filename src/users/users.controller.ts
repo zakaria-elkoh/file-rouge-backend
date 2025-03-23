@@ -17,7 +17,7 @@ import { Request, Response } from 'express';
 import { IncomingForm } from 'formidable';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Public } from '../decorators/decorators';
+import { Public, IsAdmin } from '../decorators/decorators';
 import { AuthGuard } from '../guards/auth.guard';
 import { UserType } from './user.schema';
 import FriendsService from '../friends/friends.service';
@@ -154,5 +154,44 @@ export class UsersController {
     return users
       .filter((user) => !friendsIDsArray.includes(String(user._id)))
       .slice(startIndex, endIndex);
+  }
+
+  // Admin routes
+  @Get('/admin/all')
+  @IsAdmin()
+  async getAllUsers() {
+    return this.usersService.find({});
+  }
+
+  @Put('/admin/archive/:id')
+  @IsAdmin()
+  async archiveUser(@Param('id') id: string) {
+    const user = await this.usersService.findByIdAndUpdate(id, { archived: true });
+    if (!user) throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    return user;
+  }
+
+  @Put('/admin/unarchive/:id')
+  @IsAdmin()
+  async unarchiveUser(@Param('id') id: string) {
+    const user = await this.usersService.findByIdAndUpdate(id, { archived: false });
+    if (!user) throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    return user;
+  }
+
+  @Put('/admin/make-admin/:id')
+  @IsAdmin()
+  async makeUserAdmin(@Param('id') id: string) {
+    const user = await this.usersService.findByIdAndUpdate(id, { isAdmin: true });
+    if (!user) throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    return user;
+  }
+
+  @Put('/admin/remove-admin/:id')
+  @IsAdmin()
+  async removeUserAdmin(@Param('id') id: string) {
+    const user = await this.usersService.findByIdAndUpdate(id, { isAdmin: false });
+    if (!user) throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    return user;
   }
 }

@@ -13,10 +13,13 @@ import PostsModule from './posts/posts.module';
 import CommentsModule from './comments/comments.module';
 import EventsModule from './events/events.module';
 import { HealthModule } from './health/health.module';
+import { VerificationModule } from './verification/verification.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot(),
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
     MongooseModule.forRoot(process.env.MONGO_URI!),
     UsersModule,
     AuthModule,
@@ -30,6 +33,7 @@ import { HealthModule } from './health/health.module';
     FriendsModule,
     NotificationModule,
     HealthModule,
+    VerificationModule,
   ],
   controllers: [],
   providers: [
